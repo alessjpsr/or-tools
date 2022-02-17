@@ -21,6 +21,7 @@
 #include <string>
 
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_split.h"
 #include "ortools/base/integral_types.h"
 #include "ortools/base/logging.h"
 #include "ortools/base/timer.h"
@@ -70,6 +71,32 @@ int XPRSgetnodecnt(const XPRSprob& mLp) {
 int XPRSsetobjoffset(const XPRSprob& mLp, double value) {
   XPRSsetdblcontrol(mLp, XPRS_OBJRHS, value);
   return 0;
+}
+
+void XPRS_CC optimizermsg(XPRSprob prob, void* data, const char* sMsg, int nLen,
+                          int nMsgLvl) {
+  switch (nMsgLvl) {
+      /* Print Optimizer error messages and warnings */
+    case 4: /* error */
+      LOG(WARNING) << sMsg;
+      break;
+    case 3: /* warning */
+      LOG(WARNING) << sMsg;
+      break;
+
+      /* Ignore other messages */
+    case 2: /* dialogue */
+      LOG(INFO) << sMsg;
+      break;
+    case 1: /* information */
+      LOG(INFO) << sMsg;
+      break;
+
+      /* Exit and flush buffers */
+    default:
+      fflush(NULL);
+      break;
+  }
 }
 
 enum XPRS_BASIS_STATUS {
@@ -186,6 +213,9 @@ class XpressInterface : public MPSolverInterface {
  protected:
   // Set all parameters in the underlying solver.
   virtual void SetParameters(MPSolverParameters const& param);
+  // Set xpress specific parameters (currently, only the optimization flag parameter is supported)
+  // TODO: improve this function to allow changing control parameters through the string
+  bool SetSolverSpecificParametersAsString(const std::string& parameters) override;
   // Set each parameter in the underlying solver.
   virtual void SetRelativeMipGap(double value);
   virtual void SetPrimalTolerance(double value);
@@ -213,6 +243,17 @@ class XpressInterface : public MPSolverInterface {
  private:
   XPRSprob mLp;
   bool const mMip;
+
+  // The optimizationFlags are flags to pass to XPRSmipoptimize (MIPOPTIMIZE) 
+  // or XPRSlpoptimize (LPOPTIMIZE), which specifies how to solve the
+  // initial continuous problem where the global entities are relaxed. 
+  // If the argument includes : b the initial continuous relaxation will be solved using the Newton barrier method;
+  //                            p the initial continuous relaxation will be solved using the primal simplex algorithm;
+  //                            d the initial continuous relaxation will be solved using the dual simplex algorithm;
+  //                            n the network part of the initial continuous relaxation will be identified and solved using the network simplex algorithm;
+  //                            l stop after having solved the initial continous relaxation
+  std::string optimizationFlags;
+
   // Incremental extraction.
   // Without incremental extraction we have to re-extract the model every
   // time we perform a solve. Due to the way the Reset() function is
@@ -355,6 +396,7 @@ XpressInterface::XpressInterface(MPSolver* const solver, bool mip)
     : MPSolverInterface(solver),
       mLp(0),
       mMip(mip),
+      optimizationFlags(""),
       supportIncrementalExtraction(false),
       slowUpdates(static_cast<SlowUpdates>(SlowSetObjectiveCoefficient |
                                            SlowClearObjective)),
@@ -1272,23 +1314,21 @@ MPSolver::ResultStatus XpressInterface::Solve(MPSolverParameters const& param) {
                                    -1.0 * solver_->time_limit_in_secs()));
   }
 
+  /* Tell Optimizer to call optimizermsg whenever a message is output */
+  XPRSsetcbmessage(mLp, optimizermsg, NULL);
+
   // Solve.
   // Do not CHECK_STATUS here since some errors (for example CPXERR_NO_MEMORY)
   // still allow us to query useful information.
+  // The direction of optimization is given by OBJSENSE
   timer.Restart();
 
   int xpressstat = 0;
   if (mMip) {
-    if (this->maximize_)
-      status = XPRSmaxim(mLp, "g");
-    else
-      status = XPRSminim(mLp, "g");
+    status = XPRSmipoptimize(mLp, optimizationFlags.c_str());
     XPRSgetintattrib(mLp, XPRS_MIPSTATUS, &xpressstat);
   } else {
-    if (this->maximize_)
-      status = XPRSmaxim(mLp, "");
-    else
-      status = XPRSminim(mLp, "");
+    status = XPRSlpoptimize(mLp, optimizationFlags.c_str());
     XPRSgetintattrib(mLp, XPRS_LPSTATUS, &xpressstat);
   }
 
@@ -1442,6 +1482,31 @@ MPSolver::ResultStatus XpressInterface::Solve(MPSolverParameters const& param) {
 
 MPSolverInterface* BuildXpressInterface(bool mip, MPSolver* const solver) {
   return new XpressInterface(solver, mip);
+}
+
+bool XpressInterface::SetSolverSpecificParametersAsString(
+    const std::string& parameters) {
+  if (parameters.empty()) return true;
+  for (const auto parameter : absl::StrSplit(parameters, absl::ByAnyChar(",\n"),
+                                             absl::SkipWhitespace())) {
+    std::vector<std::string> key_value = absl::StrSplit(
+        parameter, absl::ByAnyChar("= "), absl::SkipWhitespace());
+    if (key_value.size() != 2) {
+      LOG(WARNING) << absl::StrFormat("Cannot parse parameter '%s'. Expected format is 'parameter/name = value'", parameter);
+      return false;
+    }
+    std::string name = key_value[0];
+    absl::RemoveExtraAsciiWhitespace(&name);
+    std::string value = key_value[1];
+    absl::RemoveExtraAsciiWhitespace(&value);
+    if (name == "OPTFLAGS") {
+      optimizationFlags = value;
+      VLOG(2) << absl::StrFormat("Set parameter %s to %s", name, value);
+    } else {
+      VLOG(0) << absl::StrFormat("Parameter %s not supported", name);
+    }
+  }
+  return true;
 }
 
 }  // namespace operations_research
