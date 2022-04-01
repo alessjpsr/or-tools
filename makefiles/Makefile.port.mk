@@ -164,7 +164,7 @@ ifeq ("$(SYSTEM)","win")
   VS_COMTOOLS = $(VISUAL_STUDIO_MAJOR)0
 
   # Third party specific
-  CBC_PLATFORM = $(CBC_PLATFORM_PREFIX)-$(VS_RELEASE)-Release
+  CBC_PLATFORM = $(CBC_PLATFORM_PREFIX)-$(VS_RELEASE)-Debug
 
   # Java specific
   ifeq ($(JAVA_HOME),)

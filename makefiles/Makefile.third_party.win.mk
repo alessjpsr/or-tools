@@ -33,8 +33,8 @@ PROTOC = "$(WINDOWS_PROTOBUF_DIR)\\bin\\protoc.exe"
 SWIG_BINARY = $(WINDOWS_SWIG_BINARY)
 
 # tags of dependencies to checkout.
-ZLIB_TAG = 1.2.11
-ZLIB_ARCHIVE_TAG = 1211
+ZLIB_TAG = 1.2.12
+ZLIB_ARCHIVE_TAG = 1212
 PROTOBUF_TAG = v3.18.0
 ABSL_TAG = 20210324.2
 # We are using a CBC archive containing all coin-or project
@@ -264,14 +264,14 @@ dependencies/install/lib/libprotobuf.lib: $(PROTOBUF_SRCDIR) install_zlib
 	cd $(PROTOBUF_SRCPATH) && \
   set MAKEFLAGS= && "$(CMAKE)" -Hcmake -Bbuild_cmake \
     -DCMAKE_PREFIX_PATH=..\..\install \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -Dprotobuf_BUILD_TESTS=OFF \
     -DBUILD_TESTING=OFF \
     -DZLIB_ROOT=..\..\install \
     -DCMAKE_INSTALL_PREFIX=..\..\install \
     -G "NMake Makefiles" && \
-  "$(CMAKE)" --build build_cmake --config Release && \
-  "$(CMAKE)" --build build_cmake --config Release --target install
+  "$(CMAKE)" --build build_cmake --config Debug && \
+  "$(CMAKE)" --build build_cmake --config Debug --target install
 
 $(PROTOBUF_SRCDIR): | dependencies/sources
 	-$(DELREC) $(PROTOBUF_SRCDIR)
@@ -282,7 +282,7 @@ PROTOBUF_INC = /I"$(WINDOWS_PROTOBUF_PATH)\\include"
 PROTOBUF_SWIG = -I"$(WINDOWS_PROTOBUF_DIR)/include"
 PROTOBUF_PROTOC_INC = -I"$(WINDOWS_PROTOBUF_DIR)/include"
 DYNAMIC_PROTOBUF_LNK = "$(WINDOWS_PROTOBUF_PATH)\lib\libprotobuf.lib"
-STATIC_PROTOBUF_LNK = "$(WINDOWS_PROTOBUF_PATH)\lib\libprotobuf.lib"
+STATIC_PROTOBUF_LNK = "$(WINDOWS_PROTOBUF_PATH)\lib\libprotobufd.lib"
 
 PROTOBUF_LNK = $(STATIC_PROTOBUF_LNK)
 
@@ -317,13 +317,13 @@ dependencies/install/lib/absl.lib: dependencies/sources/abseil-cpp-$(ABSL_TAG) |
     -DCMAKE_CXX_STANDARD=17 \
     -DCMAKE_CXX_STANDARD_REQUIRED=ON \
     -DCMAKE_PREFIX_PATH=..\..\install \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=..\..\install \
     -G "NMake Makefiles" && \
-  "$(CMAKE)" --build build_cmake --config Release && \
-  "$(CMAKE)" --build build_cmake --config Release --target install
+  "$(CMAKE)" --build build_cmake --config Debug && \
+  "$(CMAKE)" --build build_cmake --config Debug --target install
 
 dependencies/sources/abseil-cpp-$(ABSL_TAG): | dependencies/sources
 	-$(DELREC) dependencies/sources/abseil-cpp-$(ABSL_TAG)
@@ -378,7 +378,7 @@ $(CBC_SRCDIR)/Cbc/MSVisualStudio/v10/$(CBC_PLATFORM)/cbc.exe: $(CBC_SRCDIR)
 	tools\win\upgrade_vs_project.cmd dependencies\\sources\\Cbc-$(CBC_TAG)\\CoinUtils\\MSVisualStudio\\v10\\libCoinUtils\\libCoinUtils.vcxproj $(VS_RELEASE)
 	tools\win\upgrade_vs_project.cmd dependencies\\sources\\Cbc-$(CBC_TAG)\\Cgl\\MSVisualStudio\\v10\\libCgl\\libCgl.vcxproj $(VS_RELEASE)
 	$(SED) -i 's/CBC_BUILD;/CBC_BUILD;CBC_THREAD_SAFE;CBC_NO_INTERRUPT;/g' dependencies\\sources\\Cbc-$(CBC_TAG)\\Cbc\\MSVisualStudio\\v10\\libCbcSolver\\libCbcSolver.vcxproj
-	cd dependencies\sources\Cbc-$(CBC_TAG)\Cbc\MSVisualStudio\v10 && msbuild Cbc.sln /t:cbc /p:Configuration=Release;BuildCmd=ReBuild
+	cd dependencies\sources\Cbc-$(CBC_TAG)\Cbc\MSVisualStudio\v10 && msbuild Cbc.sln /t:cbc /p:Configuration=Debug;BuildCmd=ReBuild
 
 $(CBC_SRCDIR): | dependencies/sources
 	-$(DELREC) $(CBC_SRCDIR)
@@ -468,7 +468,7 @@ dependencies/install/lib/libscip.lib: $(SCIP_SRCDIR)
     -DCMAKE_CXX_STANDARD=17 \
     -DCMAKE_CXX_STANDARD_REQUIRED=ON \
     -DCMAKE_PREFIX_PATH=..\..\install \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS=OFF \
     -DSHARED=OFF \
     -DBUILD_TESTING=OFF \
@@ -484,8 +484,8 @@ dependencies/install/lib/libscip.lib: $(SCIP_SRCDIR)
     -DLPS="none" \
     -DSYM="none" \
     -G "NMake Makefiles" && \
-  "$(CMAKE)" --build build_cmake --config Release && \
-  "$(CMAKE)" --build build_cmake --config Release --target install
+  "$(CMAKE)" --build build_cmake --config Debug && \
+  "$(CMAKE)" --build build_cmake --config Debug --target install
 	lib /REMOVE:CMakeFiles\libscip.dir\lpi\lpi_none.c.obj $(OR_TOOLS_TOP)\dependencies\install\lib\libscip.lib
 
 $(SCIP_SRCDIR): | dependencies/sources

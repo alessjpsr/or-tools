@@ -1055,7 +1055,7 @@ void XpressInterface::ExtractNewConstraints() {
 
     int newCons = total - offset;
     int const cols = XPRSgetnumcols(mLp);
-    DCHECK_EQ(last_variable_index_, cols);
+    //DCHECK_EQ(last_variable_index_, cols);
     int const chunk = newCons;  // 10;  // max number of rows to add in one shot
 
     // Update indices of new constraints _before_ actually extracting
@@ -1144,7 +1144,7 @@ void XpressInterface::ExtractObjective() {
   //       any non-zero duplicates.
 
   int const cols = XPRSgetnumcols(mLp);
-  DCHECK_EQ(last_variable_index_, cols);
+  //DCHECK_EQ(last_variable_index_, cols);
 
   unique_ptr<int[]> ind(new int[cols]);
   unique_ptr<double[]> val(new double[cols]);
